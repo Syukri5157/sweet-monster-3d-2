@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sweet Monster 3D - Roblox Edition</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+    body {
+      font-family: 'Fredoka', cursive, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      overflow: hidden;
+      background-color: #0f172a;
+    }
+
+    #game-canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    @keyframes damageFlash {
+      0% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+      50% { box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.7); }
+      100% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+    }
+    .damage-hit {
+      animation: damageFlash 0.4s ease;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0px) scale(1); opacity: 1; }
+      100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+    }
+    .floating-dmg {
+      position: absolute;
+      animation: floatUp 0.8s ease-out forwards;
+      font-weight: 900;
+      color: #ef4444;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .sweet-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 3px solid #f472b6;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-candy {
+      background: linear-gradient(135deg, #ec4899 0%, #d946ef 100%);
+      box-shadow: 0 5px 0 #be185d, 0 10px 20px rgba(236, 72, 153, 0.4);
+      transition: all 0.1s ease;
+    }
+
+    .btn-candy:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #be185d, 0 4px 10px rgba(236, 72, 153, 0.4);
+    }
+
+    .dpad-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: 3px solid #ec4899;
+      color: #be185d;
+      box-shadow: 0 4px 0 #f472b6;
+      touch-action: none;
+    }
+
+    .dpad-btn:active, .dpad-btn.active {
+      background: #f472b6;
+      color: white;
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #be185d;
+    }
+
+    .bar-bg {
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    .hp-fill {
+      background: linear-gradient(90deg, #ef4444 0%, #22c55e 100%);
+      transition: width 0.3s ease;
+    }
+
+    .boss-hp-fill {
+      background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
+      transition: width 0.3s ease;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #f472b6;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="w-full h-full relative" id="main-body">
+
+  <canvas id="game-canvas"></canvas>
+
+  <!-- CHARACTER & SAVE SLOT SELECTION MODAL -->
+  <div id="slot-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div class="sweet-card p-6 m-4 max-w-lg w-full text-center space-y-6 border-4 border-pink-500 shadow-2xl">
+      <div class="border-b pb-3 border-pink-200">
+        <h2 class="text-2xl md:text-3xl font-black text-pink-600">🎮 Pilih Slot Watak Roblox</h2>
+        <p class="text-xs text-gray-600 font-bold mt-1">Setiap watak mempunyai simpanan (save) dan kemajuan tahap sendiri!</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Slot 1: Muhammad Adwa -->
+        <div id="slot-card-0" onclick="selectCharacterSlot(0)" class="bg-gradient-to-b from-yellow-50 to-pink-50 p-4 rounded-2xl border-3 border-pink-400 cursor-pointer hover:scale-105 transition shadow-md flex flex-col items-center">
+          <div class="w-16 h-16 rounded-full bg-yellow-300 border-2 border-pink-500 flex items-center justify-center text-3xl shadow mb-2">👦</div>
+          <h3 class="font-black text-pink-700 text-base">Muhammad Adwa</h3>
+          <div class="text-xs text-gray-600 font-bold mt-1 space-y-0.5">
+            <div id="slot-0-level">Level: 1</div>
+            <div id="slot-0-kp">Kandi Points: 100 KP</div>
+            <div id="slot-0-monsters">Monster Ditangkap: 0</div>
+          </div>
+          <button class="mt-3 bg-pink-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow w-full">Pilih Adwa 🚀</button>
+        </div>
+
+        <!-- Slot 2: Adelia Akwa -->
+        <div id="slot-card-1" onclick="selectCharacterSlot(1)" class="bg-gradient-to-b from-purple-50 to-pink-50 p-4 rounded-2xl border-3 border-purple-400 cursor-pointer hover:scale-105 transition shadow-md flex flex-col items-center">
+          <div class="w-16 h-16 rounded-full bg-pink-300 border-2 border-purple-500 flex items-center justify-center text-3xl shadow mb-2">👧</div>
+          <h3 class="font-black text-purple-700 text-base">Adelia Akwa</h3>
+          <div class="text-xs text-gray-600 font-bold mt-1 space-y-0.5">
+            <div id="slot-1-level">Level: 1</div>
+            <div id="slot-1-kp">Kandi Points: 100 KP</div>
+            <div id="slot-1-monsters">Monster Ditangkap: 0</div>
+          </div>
+          <button class="mt-3 bg-purple-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow w-full">Pilih Adelia 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="absolute inset-0 pointer-events-none p-2 md:p-4 flex flex-col justify-between z-10">
+
+    <div class="flex justify-between items-start w-full pointer-events-auto flex-wrap gap-2">
+      
+      <!-- Player Profile Card -->
+      <div class="sweet-card p-2 md:p-3 flex items-center space-x-2 md:space-x-3">
+        <div id="char-avatar" class="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-pink-500 bg-yellow-300 flex items-center justify-center text-xl md:text-2xl shadow">
+          👦
+        </div>
+        <div>
+          <div class="flex items-center space-x-1">
+            <span id="char-name" class="font-black text-pink-600 text-xs md:text-sm">Muhammad Adwa</span>
+            <span id="char-level-tag" class="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">Lvl 1</span>
+          </div>
+          
+          <!-- HP Bar -->
+          <div class="w-28 md:w-36 h-3 bar-bg rounded-full overflow-hidden relative my-0.5">
+            <div id="hp-bar" class="h-full hp-fill w-full"></div>
+            <span id="hp-text" class="absolute inset-0 text-[8px] font-black text-white text-center flex items-center justify-center drop-shadow">100 / 100 HP</span>
+          </div>
+          
+          <!-- Math Topic Badge -->
+          <div id="math-topic-display" class="text-[9px] font-bold text-purple-700 truncate max-w-[150px]">📚 Topik: Tambahan Asas</div>
+          <div id="accessory-badge" class="text-[9px] font-bold text-pink-700 hidden">✨ Roblox Aura Aktif</div>
+        </div>
+        
+        <button id="switch-slot-btn" class="bg-pink-500 text-white text-[10px] px-2 py-1.5 rounded-xl font-black shadow hover:bg-pink-600 transition active:scale-95">
+          Tukar Slot 🔄
+        </button>
+      </div>
+
+      <!-- Stats & Quick Actions -->
+      <div class="flex items-center space-x-1.5 md:space-x-2 flex-wrap">
+        <div class="sweet-card px-3 py-1.5 flex items-center space-x-1 border-purple-500 cursor-pointer hover:bg-purple-50" id="btn-select-level">
+          <i class="fa-solid fa-map text-purple-600 text-sm md:text-base"></i>
+          <span id="level-badge" class="font-black text-purple-700 text-xs md:text-sm">LVL 1/100</span>
+        </div>
+
+        <div class="sweet-card px-3 py-1.5 flex items-center space-x-1 border-amber-400">
+          <i class="fa-solid fa-coins text-amber-500 text-base animate-bounce"></i>
+          <span id="kandi-points" class="font-black text-amber-600 text-xs md:text-sm">100 KP</span>
+        </div>
+
+        <!-- Zoom controls -->
+        <div class="sweet-card px-2 py-1.5 flex items-center space-x-1 border-pink-400">
+          <button onclick="adjustZoom(-4)" class="w-7 h-7 bg-pink-100 hover:bg-pink-200 text-pink-700 font-black rounded-lg shadow text-xs flex items-center justify-center" title="Zoom In">🔍+</button>
+          <button onclick="adjustZoom(4)" class="w-7 h-7 bg-pink-100 hover:bg-pink-200 text-pink-700 font-black rounded-lg shadow text-xs flex items-center justify-center" title="Zoom Out">🔍-</button>
+        </div>
+
+        <button id="btn-open-math" class="sweet-card px-3 py-1.5 bg-gradient-to-r from-amber-300 to-yellow-400 text-amber-900 font-black text-xs md:text-sm flex items-center space-x-1 hover:scale-105 active:scale-95 transition">
+          <i class="fa-solid fa-calculator"></i>
+          <span>Latih Kuiz 🧠</span>
+        </button>
+
+        <button id="btn-open-shop" class="sweet-card px-3 py-1.5 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-black text-xs md:text-sm flex items-center space-x-1 hover:scale-105 active:scale-95 transition">
+          <i class="fa-solid fa-store text-yellow-300"></i>
+          <span>Kedai 🛒</span>
+        </button>
+
+        <button id="btn-open-gallery" class="sweet-card px-3 py-1.5 bg-gradient-to-r from-blue-400 to-indigo-500 text-white font-black text-xs md:text-sm flex items-center space-x-1 hover:scale-105 active:scale-95 transition">
+          <i class="fa-solid fa-book-bookmark text-yellow-200"></i>
+          <span>Galeri 📖</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION MSG BOX -->
+    <div id="notification-box" class="self-center sweet-card px-6 py-2 text-center text-pink-700 font-bold text-xs md:text-sm shadow-xl transition-all duration-300 opacity-0 transform -translate-y-4">
+      Sedia mengembara arena Roblox & Belajar Matematik! 🍬
+    </div>
+
+    <!-- BOTTOM CONTROLS & ACTION BUTTON -->
+    <div class="flex justify-between items-end w-full pointer-events-auto pb-1">
+      
+      <!-- Touch D-Pad -->
+      <div class="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
+        <button id="btn-up" class="dpad-btn absolute top-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg font-black">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button id="btn-down" class="dpad-btn absolute bottom-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg font-black">
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <button id="btn-left" class="dpad-btn absolute left-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg font-black">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button id="btn-right" class="dpad-btn absolute right-0 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg font-black">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Action Button Only -->
+      <div class="flex flex-col items-end space-y-2">
+        <button id="btn-catch" class="btn-candy text-white font-black text-sm md:text-lg px-6 py-3 rounded-2xl flex items-center space-x-2 active:scale-95">
+          <i class="fa-solid fa-hand text-lg md:text-xl"></i>
+          <span>TANGKAP MONSTER!</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MATH QUIZ MODAL -->
+  <div id="math-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md hidden pointer-events-auto">
+    <div class="sweet-card p-5 m-4 max-w-sm w-full text-center space-y-4 border-4 border-amber-400">
+      <div class="flex justify-between items-center border-b pb-2 border-pink-200">
+        <h3 id="math-modal-title" class="text-lg font-black text-amber-600 flex items-center space-x-2">
+          <span>🧠 Kuiz Matematik Sekolah Rendah!</span>
+        </h3>
+        <button id="btn-close-math" class="text-gray-400 hover:text-pink-600 font-black text-lg hidden">✕</button>
+      </div>
+
+      <!-- Boss Progress Bar -->
+      <div id="boss-progress-container" class="hidden space-y-1">
+        <div class="flex justify-between text-[11px] font-black text-purple-700">
+          <span id="boss-title-label">Nyawa Bos Gergasi Roblox:</span>
+          <span id="boss-hp-text">10 / 10 Soalan</span>
+        </div>
+        <div class="w-full h-3 bar-bg rounded-full overflow-hidden relative">
+          <div id="boss-hp-bar" class="h-full boss-hp-fill w-full"></div>
+        </div>
+      </div>
+      
+      <div class="bg-amber-50 p-3 rounded-2xl border-2 border-amber-300 shadow-inner">
+        <div id="math-topic-tag" class="text-xs font-bold text-amber-700 mb-1">Topik: Tambahan</div>
+        <div id="math-question" class="text-2xl md:text-3xl font-black text-purple-700 tracking-wider">
+          5 + 3 = ?
+        </div>
+      </div>
+
+      <div id="math-options" class="grid grid-cols-2 gap-2 pt-1"></div>
+    </div>
+  </div>
+
+  <!-- SHOP MODAL -->
+  <div id="shop-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md hidden pointer-events-auto">
+    <div class="sweet-card p-5 m-4 max-w-xl w-full text-center space-y-3 border-4 border-purple-400 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b pb-2 border-pink-200">
+        <h3 class="text-xl font-black text-purple-600 flex items-center space-x-2">
+          <span>🛒 Kedai Roblox & Aksesori Watak</span>
+        </h3>
+        <button id="btn-close-shop" class="text-gray-400 hover:text-pink-600 font-black text-lg">✕</button>
+      </div>
+      
+      <div class="flex justify-between items-center bg-purple-50 px-4 py-2 rounded-xl border border-purple-200">
+        <span class="text-xs font-bold text-purple-700">Kandi Points Anda:</span>
+        <span id="shop-kp-display" class="font-black text-amber-600 text-base">100 KP</span>
+      </div>
+
+      <!-- Shop Navigation Tabs -->
+      <div class="flex space-x-1 border-b pb-2 overflow-x-auto">
+        <button id="tab-weapons" onclick="switchShopTab('weapons')" class="px-3 py-1 text-xs font-black rounded-lg bg-pink-500 text-white whitespace-nowrap">⚔️ Senjata</button>
+        <button id="tab-armor" onclick="switchShopTab('armor')" class="px-3 py-1 text-xs font-black rounded-lg bg-gray-200 text-gray-700 whitespace-nowrap">🛡️ Perisai</button>
+        <button id="tab-potions" onclick="switchShopTab('potions')" class="px-3 py-1 text-xs font-black rounded-lg bg-gray-200 text-gray-700 whitespace-nowrap">🧪 Pemulihan HP</button>
+        <button id="tab-options" onclick="switchShopTab('options')" class="px-3 py-1 text-xs font-black rounded-lg bg-gray-200 text-gray-700 whitespace-nowrap">✨ Aksesori Roblox</button>
+      </div>
+
+      <!-- Shop Items List -->
+      <div id="shop-items-container" class="space-y-2 overflow-y-auto pr-1 text-left flex-1"></div>
+    </div>
+  </div>
+
+  <!-- MONSTER GALLERY MODAL -->
+  <div id="gallery-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md hidden pointer-events-auto">
+    <div class="sweet-card p-5 m-4 max-w-lg w-full text-center space-y-4 border-4 border-blue-400 max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b pb-2 border-blue-200">
+        <h3 class="text-xl font-black text-blue-600 flex items-center space-x-2">
+          <span>📖 Galeri Sweet Monster Ditangkap</span>
+        </h3>
+        <button id="btn-close-gallery" class="text-gray-400 hover:text-pink-600 font-black text-lg">✕</button>
+      </div>
+      <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto p-1 flex-1"></div>
+    </div>
+  </div>
+
+  <!-- LEVEL SELECTOR MODAL -->
+  <div id="level-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md hidden pointer-events-auto">
+    <div class="sweet-card p-5 m-4 max-w-xl w-full text-center space-y-4 border-4 border-purple-500 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b pb-2 border-pink-200">
+        <h3 class="text-xl font-black text-purple-600 flex items-center space-x-2">
+          <span>🗺️ Pilih Level Dunia Manisan (1 - 100) & Topik Matematik</span>
+        </h3>
+        <button id="btn-close-level" class="text-gray-400 hover:text-pink-600 font-black text-lg">✕</button>
+      </div>
+      <div id="level-grid" class="grid grid-cols-1 md:grid-cols-2 gap-2 overflow-y-auto p-1 flex-1 text-left"></div>
+    </div>
+  </div>
+
+  <!-- FLOATING DAMAGE CONTAINER -->
+  <div id="dmg-container" class="absolute inset-0 pointer-events-none z-30"></div>
+
+  <!-- WIN MODAL -->
+  <div id="win-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md hidden pointer-events-auto">
+    <div class="sweet-card p-6 m-4 max-w-md w-full text-center space-y-4 border-4 border-pink-400">
+      <h2 id="win-title" class="text-2xl md:text-3xl font-black text-pink-600">🎉 TAHNIAH! LEVEL SELESAI! 🎉</h2>
+      <p id="win-desc" class="text-gray-700 font-bold text-sm">Anda berjaya menyelesaikan kuiz matematik dan menangkap raksasa Roblox!</p>
+      
+      <div class="bg-pink-50 p-3 rounded-2xl border-2 border-pink-200">
+        <p class="text-xs font-black text-pink-800 uppercase tracking-wider">Ganjaran:</p>
+        <div id="win-stats" class="text-sm font-bold text-purple-600 mt-1">
+          +50 Kandi Points & EXP! 🏆
+        </div>
+      </div>
+
+      <button id="btn-next-level" class="btn-candy text-white font-black w-full py-3.5 rounded-2xl text-base">
+        Teruskan ke Level Seterusnya 🚀
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let scene, camera, renderer;
+    let playerGroup, environmentGroup, obstaclesGroup, bossSkillGroup;
+    let playerModelParts = {};
+    let monsters = [];
+    let obstacles = [];
+    let caughtCount = 0;
+    let cameraHeightOffset = 30; // Adjustable zoom height
+    let cameraDistanceOffset = 25; // Adjustable zoom distance
+    
+    // Character Slots State
+    let activeSlotIndex = 0; // 0: Muhammad Adwa, 1: Adelia Akwa
+    const characterProfiles = [
+      { name: "Muhammad Adwa", avatar: "👦", defaultColor: 0xfacc15 },
+      { name: "Adelia Akwa", avatar: "👧", defaultColor: 0xf472b6 }
+    ];
+
+    // Default save slots state data
+    let saveSlots = [
+      { level: 1, unlockedLevels: 1, maxHp: 100, currentHp: 100, kandiPoints: 100, playerSpeed: 0.35, armorDefense: 0, equippedWeapon: 'Sugar Stick', equippedArmor: 'Basic Cloth', equippedAccessory: 'None', caughtCatalog: {} },
+      { level: 1, unlockedLevels: 1, maxHp: 100, currentHp: 100, kandiPoints: 100, playerSpeed: 0.35, armorDefense: 0, equippedWeapon: 'Sugar Stick', equippedArmor: 'Basic Cloth', equippedAccessory: 'None', caughtCatalog: {} }
+    ];
+
+    function loadSaveData() {
+      const saved = localStorage.getItem('sweet_monster_roblox_saves_v8');
+      if (saved) {
+        try {
+          saveSlots = JSON.parse(saved);
+        } catch(e) { console.error(e); }
+      }
+    }
+
+    function persistSaveData() {
+      localStorage.setItem('sweet_monster_roblox_saves_v8', JSON.stringify(saveSlots));
+    }
+
+    function getCurrentSlot() { return saveSlots[activeSlotIndex]; }
+
+    const maxLevel = 100;
+    let isBossLevel = false;
+    let bossMaxQuestions = 10;
+    let bossCurrentQuestions = 0;
+    let catchDistance = 10.0;
+
+    let keys = { up: false, down: false, left: false, right: false };
+    let currentMathAnswer = 0;
+    let pendingCatchMonster = null;
+    let lastTouchDamageTime = 0;
+    let isGameFrozen = false;
+
+    function adjustZoom(delta) {
+      cameraHeightOffset = Math.max(15, Math.min(60, cameraHeightOffset + delta));
+      cameraDistanceOffset = Math.max(12, Math.min(50, cameraDistanceOffset + delta * 0.8));
+      showNotification(`Zoom Kamera Diubah (${cameraHeightOffset}) 🔍`);
+    }
+
+    // Math Topics Definition per Level Range (Primary School Standard)
+    function getMathTopicForLevel(lvl) {
+      if (lvl <= 15) return { name: "Tambah & Tolak Asas (1-20)", type: "add_sub", desc: "Operasi asas tambah dan tolak nombor bulat kecil." };
+      if (lvl <= 30) return { name: "Sifir & Darab Mudah", type: "multiply", desc: "Latihan sifir darab 2, 3, 4, 5 dan 10." };
+      if (lvl <= 45) return { name: "Bahagi Asas", type: "divide", desc: "Membahagikan nombor dengan adil dan tepat." };
+      if (lvl <= 60) return { name: "Pecahan Mudah & Perpuluhan", type: "fraction", desc: "Mengenal pecahan separuh, suku, dan perpuluhan." };
+      if (lvl <= 75) return { name: "Wang, Masa & Waktu", type: "money_time", desc: "Pengiraan duit syiling, ringgit, jam dan minit." };
+      if (lvl <= 90) return { name: "Operasi Bergabung (+, -, x, /)", type: "combined", desc: "Menguji minda dengan dua operasi dalam satu soalan." };
+      return { name: "Cabaran Bijak Matematik Gergasi", type: "expert", desc: "Soalan peringkat tinggi untuk juara matematik sekolah!" };
+    }
+
+    // Detailed Humanoid Roblox 3D Character Builder matching reference image accurately
+    function createRobloxHumanoidModel(slotIdx) {
+      const group = new THREE.Group();
+
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.5 });
+      const jacketMat = new THREE.MeshStandardMaterial({ color: slotIdx === 0 ? 0xfacc15 : 0xf472b6, roughness: 0.4 });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+      const shoeMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.4 });
+      const capMat = new THREE.MeshStandardMaterial({ color: slotIdx === 0 ? 0x2563eb : 0xfacc15, roughness: 0.3 });
+      const capDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 });
+
+      // Torso
+      const torsoGeo = new THREE.BoxGeometry(1.2, 1.4, 0.7);
+      const torso = new THREE.Mesh(torsoGeo, jacketMat);
+      torso.position.y = 1.7;
+      torso.castShadow = true;
+      torso.receiveShadow = true;
+      group.add(torso);
+      playerModelParts.torso = torso;
+
+      // Pokeball motif badge on jacket
+      const badgeGeo = new THREE.BoxGeometry(0.3, 0.3, 0.1);
+      const badgeMesh = new THREE.Mesh(badgeGeo, whiteMat);
+      badgeMesh.position.set(0, 1.7, 0.36);
+      group.add(badgeMesh);
+
+      // Backpack
+      const bpGeo = new THREE.BoxGeometry(1.0, 1.1, 0.5);
+      const backpack = new THREE.Mesh(bpGeo, capDarkMat);
+      backpack.position.set(0, 1.7, -0.45);
+      backpack.castShadow = true;
+      group.add(backpack);
+
+      // Head
+      const headGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
+      const head = new THREE.Mesh(headGeo, skinMat);
+      head.position.y = 2.75;
+      head.castShadow = true;
+      group.add(head);
+      playerModelParts.head = head;
+
+      // Hair or Hijab
+      if (slotIdx === 1) {
+        const hijabGeo = new THREE.BoxGeometry(1.06, 0.9, 1.06);
+        const hijab = new THREE.Mesh(hijabGeo, whiteMat);
+        hijab.position.set(0, 2.75, 0);
+        group.add(hijab);
+      } else {
+        const hairGeo = new THREE.BoxGeometry(1.05, 0.35, 1.05);
+        const hairMat = new THREE.MeshStandardMaterial({ color: 0x3f1f0a });
+        const hair = new THREE.Mesh(hairGeo, hairMat);
+        hair.position.set(0, 3.2, 0);
+        group.add(hair);
+      }
+
+      // Cap
+      const capTopGeo = new THREE.BoxGeometry(1.08, 0.4, 1.08);
+      const capTop = new THREE.Mesh(capTopGeo, capMat);
+      capTop.position.set(0, 3.35, 0);
+      group.add(capTop);
+
+      const visorGeo = new THREE.BoxGeometry(1.1, 0.12, 0.5);
+      const visor = new THREE.Mesh(visorGeo, capDarkMat);
+      visor.position.set(0, 3.2, 0.55);
+      group.add(visor);
+
+      const cLogoGeo = new THREE.BoxGeometry(0.25, 0.25, 0.08);
+      const cLogo = new THREE.Mesh(cLogoGeo, whiteMat);
+      cLogo.position.set(0, 3.35, 0.55);
+      group.add(cLogo);
+
+      // Limbs
+      const armGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+      const leftArm = new THREE.Mesh(armGeo, jacketMat);
+      leftArm.position.set(-0.9, 1.7, 0);
+      leftArm.castShadow = true;
+      group.add(leftArm);
+      playerModelParts.leftArm = leftArm;
+
+      const rightArm = new THREE.Mesh(armGeo, jacketMat);
+      rightArm.position.set(0.9, 1.7, 0);
+      rightArm.castShadow = true;
+      group.add(rightArm);
+      playerModelParts.rightArm = rightArm;
+
+      const pbGeo = new THREE.SphereGeometry(0.25, 12, 12);
+      const pokeball = new THREE.Mesh(pbGeo, redMat);
+      pokeball.position.set(0.9, 1.1, 0.3);
+      group.add(pokeball);
+
+      const legGeo = new THREE.BoxGeometry(0.45, 1.1, 0.45);
+      const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+      leftLeg.position.set(-0.32, 0.55, 0);
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+      playerModelParts.leftLeg = leftLeg;
+
+      const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+      rightLeg.position.set(0.32, 0.55, 0);
+      rightLeg.castShadow = true;
+      group.add(rightLeg);
+      playerModelParts.rightLeg = rightLeg;
+
+      const shoeGeo = new THREE.BoxGeometry(0.48, 0.3, 0.55);
+      const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
+      leftShoe.position.set(-0.32, 0.05, 0.05);
+      group.add(leftShoe);
+
+      const rightShoe = new THREE.Mesh(shoeGeo, shoeMat);
+      rightShoe.position.set(0.32, 0.05, 0.05);
+      group.add(rightShoe);
+
+      // Accessory / Aura Mesh
+      const auraGeo = new THREE.TorusGeometry(1.6, 0.08, 8, 24);
+      const auraMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+      const auraRing = new THREE.Mesh(auraGeo, auraMat);
+      auraRing.rotation.x = Math.PI / 2;
+      auraRing.position.y = 0.2;
+      const slot = getCurrentSlot();
+      auraRing.visible = (slot.equippedAccessory === 'Aura Bintang');
+      group.add(auraRing);
+      playerModelParts.auraRing = auraRing;
+
+      return group;
+    }
+
+    // Realistic Sweet Monsters (Detailed 3D models with glossy frosting, sprinkles & adorable features)
+    function createRealisticSweetMonsterModel(type) {
+      const group = new THREE.Group();
+
+      if (type.id === 'm1') {
+        // Realistic Donut Bear
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffa500, roughness: 0.3, metalness: 0.1 });
+        const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.8, 32);
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 0.8;
+        body.castShadow = true;
+        group.add(body);
+
+        const frostMat = new THREE.MeshStandardMaterial({ color: 0xff69b4, roughness: 0.2 });
+        const frostGeo = new THREE.CylinderGeometry(1.22, 1.22, 0.3, 32);
+        const frost = new THREE.Mesh(frostGeo, frostMat);
+        frost.position.y = 1.15;
+        group.add(frost);
+
+        const earGeo = new THREE.SphereGeometry(0.35, 16, 16);
+        const lEar = new THREE.Mesh(earGeo, bodyMat);
+        lEar.position.set(-0.8, 1.6, 0);
+        group.add(lEar);
+        const rEar = new THREE.Mesh(earGeo, bodyMat);
+        rEar.position.set(0.8, 1.6, 0);
+        group.add(rEar);
+
+      } else if (type.id === 'm2') {
+        // Realistic Cupcake Bunny
+        const cupMat = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.6 });
+        const cupGeo = new THREE.ConeGeometry(0.9, 1.2, 16);
+        cupGeo.scale(1, 1, 0.8);
+        const cup = new THREE.Mesh(cupGeo, cupMat);
+        cup.position.y = 0.6;
+        cup.castShadow = true;
+        group.add(cup);
+
+        const frostMat = new THREE.MeshStandardMaterial({ color: 0xdda0dd, roughness: 0.3 });
+        const frostGeo = new THREE.SphereGeometry(0.9, 16, 16);
+        const frost = new THREE.Mesh(frostGeo, frostMat);
+        frost.position.y = 1.3;
+        group.add(frost);
+
+        const earGeo = new THREE.BoxGeometry(0.25, 0.9, 0.15);
+        const lEar = new THREE.Mesh(earGeo, frostMat);
+        lEar.position.set(-0.35, 2.1, 0);
+        group.add(lEar);
+        const rEar = new THREE.Mesh(earGeo, frostMat);
+        rEar.position.set(0.35, 2.1, 0);
+        group.add(rEar);
+
+      } else if (type.id === 'm3') {
+        // Realistic Ice Cream Penguin
+        const coneMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.5 });
+        const coneGeo = new THREE.ConeGeometry(1.0, 1.5, 16);
+        const cone = new THREE.Mesh(coneGeo, coneMat);
+        cone.position.y = 0.75;
+        cone.castShadow = true;
+        group.add(cone);
+
+        const scoopMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.2 });
+        const scoopGeo = new THREE.SphereGeometry(0.85, 24, 24);
+        const scoop = new THREE.Mesh(scoopGeo, scoopMat);
+        scoop.position.y = 1.6;
+        group.add(scoop);
+
+        const wingGeo = new THREE.BoxGeometry(0.2, 0.7, 0.5);
+        const lWing = new THREE.Mesh(wingGeo, scoopMat);
+        lWing.position.set(-0.9, 1.5, 0);
+        group.add(lWing);
+        const rWing = new THREE.Mesh(wingGeo, scoopMat);
+        rWing.position.set(0.9, 1.5, 0);
+        group.add(rWing);
+
+      } else {
+        // Scary-Cute Boss: Giga Candy Vampire Bear
+        const bossMat = new THREE.MeshStandardMaterial({ color: 0x881337, roughness: 0.3, metalness: 0.2 });
+        const bodyGeo = new THREE.CylinderGeometry(2.0, 2.2, 2.8, 32);
+        const body = new THREE.Mesh(bodyGeo, bossMat);
+        body.position.y = 1.4;
+        body.castShadow = true;
+        group.add(body);
+
+        const headGeo = new THREE.SphereGeometry(1.6, 24, 24);
+        const head = new THREE.Mesh(headGeo, bossMat);
+        head.position.y = 3.2;
+        group.add(head);
+
+        const hornGeo = new THREE.ConeGeometry(0.4, 1.2, 16);
+        const lHorn = new THREE.Mesh(hornGeo, new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+        lHorn.position.set(-1.0, 4.4, 0);
+        group.add(lHorn);
+        const rHorn = new THREE.Mesh(hornGeo, new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+        rHorn.position.set(1.0, 4.4, 0);
+        group.add(rHorn);
+      }
+
+      // Detailed realistic eyes (Shiny black beads with white reflection)
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+      const eyeGeo = new THREE.SphereGeometry(0.18, 16, 16);
+      const lEye = new THREE.Mesh(eyeGeo, eyeMat);
+      lEye.position.set(-0.35, type.isBoss ? 3.3 : 1.5, type.isBoss ? 1.45 : 0.85);
+      group.add(lEye);
+      const rEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rEye.position.set(0.35, type.isBoss ? 3.3 : 1.5, type.isBoss ? 1.45 : 0.85);
+      group.add(rEye);
+
+      return group;
+    }
+
+    const monsterTypes = [
+      { id: "m1", name: "Donut Bear 🍩", behavior: "patrol", desc: "Merayau santai di taman donut.", isBoss: false },
+      { id: "m2", name: "Cupcake Bunny 🧁", behavior: "flee", desc: "Comel dan perlahan-lari mengelak apabila anda mendekati.", isBoss: false },
+      { id: "m3", name: "Ice Cream Penguin 🍦", behavior: "chase", desc: "Suka mengejar pemain dengan ramah.", isBoss: false },
+      { id: "b1", name: "BOS: Giga Candy Vampire Bear 🧛🐻", behavior: "boss", isBoss: true, desc: "Bos gergasi Roblox yang menakutkan tapi comel! Menguji 10 soalan matematik." }
+    ];
+
+    function init() {
+      loadSaveData();
+      
+      const container = document.getElementById('game-canvas');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('#0f172a');
+      scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 30, 25);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ canvas: container, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Lights with depth and tone
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xfff5f5, 0.9);
+      dirLight.position.set(25, 40, 25);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 100;
+      dirLight.shadow.camera.left = -35;
+      dirLight.shadow.camera.right = 35;
+      dirLight.shadow.camera.top = 35;
+      dirLight.shadow.camera.bottom = -35;
+      scene.add(dirLight);
+
+      environmentGroup = new THREE.Group();
+      scene.add(environmentGroup);
+
+      obstaclesGroup = new THREE.Group();
+      scene.add(obstaclesGroup);
+
+      bossSkillGroup = new THREE.Group();
+      scene.add(bossSkillGroup);
+
+      playerGroup = new THREE.Group();
+      scene.add(playerGroup);
+
+      setupControls();
+      setupShopAndModalEvents();
+      updateSlotModalUI();
+    }
+
+    function updateSlotModalUI() {
+      for (let i = 0; i < 2; i++) {
+        const slot = saveSlots[i];
+        document.getElementById(`slot-${i}-level`).innerText = `Level: ${slot.level}`;
+        document.getElementById(`slot-${i}-kp`).innerText = `Kandi Points: ${slot.kandiPoints} KP`;
+        const caught = Object.keys(slot.caughtCatalog || {}).length;
+        document.getElementById(`slot-${i}-monsters`).innerText = `Monster Ditangkap: ${caught}`;
+      }
+    }
+
+    function selectCharacterSlot(slotIdx) {
+      activeSlotIndex = slotIdx;
+      document.getElementById('slot-modal').classList.add('hidden');
+
+      const profile = characterProfiles[slotIdx];
+      document.getElementById('char-avatar').innerText = profile.avatar;
+      document.getElementById('char-name').innerText = profile.name;
+
+      buildPlayerMesh();
+      loadLevel(getCurrentSlot().level);
+
+      if (!window.__gameAnimationStarted) {
+        window.__gameAnimationStarted = true;
+        window.addEventListener('resize', onWindowResize);
+        animate();
+      }
+      showNotification(`Selamat datang kembali, ${profile.name}! ✨`);
+    }
+
+    function buildPlayerMesh() {
+      while(playerGroup.children.length > 0) {
+        playerGroup.remove(playerGroup.children[0]);
+      }
+      const model = createRobloxHumanoidModel(activeSlotIndex);
+      playerGroup.add(model);
+    }
+
+    // Build dynamic thematic arena flooring & expanding environments matching level math topics
+    function buildLevelEnvironment(lvl) {
+      while(environmentGroup.children.length > 0){ 
+        environmentGroup.remove(environmentGroup.children[0]); 
+      }
+      while(obstaclesGroup.children.length > 0){ 
+        obstaclesGroup.remove(obstaclesGroup.children[0]); 
+      }
+      obstacles = [];
+
+      // Arena radius expands progressively with level (from 28 up to 44)
+      const arenaRadius = Math.min(28 + Math.floor(lvl / 4), 44);
+
+      let floorColor = 0x312e81; 
+      let perimeterMatColor = 0xf472b6;
+
+      if (lvl <= 15) {
+        floorColor = 0x065f46; // Lush Green Grass Arena
+        perimeterMatColor = 0x22c55e;
+      } else if (lvl <= 30) {
+        floorColor = 0xb45309; // Sandy Desert Arena
+        perimeterMatColor = 0xf59e0b;
+      } else if (lvl <= 45) {
+        floorColor = 0x0369a1; // Water / Ice Arena
+        perimeterMatColor = 0x38bdf8;
+      } else if (lvl <= 60) {
+        floorColor = 0x7e22ce; // Purple Crystal Candy Arena
+        perimeterMatColor = 0xd946ef;
+      } else if (lvl <= 75) {
+        floorColor = 0x9a3412; // Chocolate & Cookie Arena
+        perimeterMatColor = 0xd97706;
+      } else {
+        floorColor = 0x881337; // Boss Magic Lava Arena
+        perimeterMatColor = 0xf43f5e;
+      }
+
+      // Floor Arena
+      const floorGeo = new THREE.CylinderGeometry(arenaRadius, arenaRadius, 1.4, 32);
+      const floorMat = new THREE.MeshStandardMaterial({ color: floorColor, roughness: 0.3 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.position.y = -0.7;
+      floor.receiveShadow = true;
+      environmentGroup.add(floor);
+
+      const ringGeo = new THREE.RingGeometry(arenaRadius - 1, arenaRadius + 0.5, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: perimeterMatColor, side: THREE.DoubleSide });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.02;
+      environmentGroup.add(ring);
+
+      // Fantasy Candy Trees around perimeter
+      for (let i = 0; i < 14; i++) {
+        const angle = (i / 14) * Math.PI * 2;
+        const x = Math.cos(angle) * (arenaRadius - 3);
+        const z = Math.sin(angle) * (arenaRadius - 3);
+
+        const trunkGeo = new THREE.BoxGeometry(0.9, 5.5, 0.9);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0xd97706 });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.set(x, 2.75, z);
+        trunk.castShadow = true;
+        environmentGroup.add(trunk);
+
+        const topGeo = new THREE.BoxGeometry(3.5, 3.5, 3.5);
+        const topMat = new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xec4899 : 0xa855f7 });
+        const top = new THREE.Mesh(topGeo, topMat);
+        top.position.set(x, 6.0, z);
+        top.castShadow = true;
+        environmentGroup.add(top);
+      }
+
+      // Add Arena Obstacles
+      const numObstacles = Math.min(2 + Math.floor(lvl / 4), 7);
+      const obsMat = new THREE.MeshStandardMaterial({ color: 0xfb7185, roughness: 0.3 });
+      const chocoMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.4 });
+
+      for (let j = 0; j < numObstacles; j++) {
+        const obsAngle = (j / numObstacles) * Math.PI * 2 + (lvl * 0.4);
+        const dist = 10 + (j % 2) * 5;
+        const ox = Math.cos(obsAngle) * dist;
+        const oz = Math.sin(obsAngle) * dist;
+
+        const width = 2.2 + (j % 2) * 0.6;
+        const height = 2.8;
+        const depth = 2.2;
+
+        const geo = new THREE.BoxGeometry(width, height, depth);
+        const mat = (j % 2 === 0) ? obsMat : chocoMat;
+        const obstacle = new THREE.Mesh(geo, mat);
+        obstacle.position.set(ox, height / 2, oz);
+        obstacle.castShadow = true;
+        obstacle.receiveShadow = true;
+        
+        obstaclesGroup.add(obstacle);
+        obstacles.push({
+          mesh: obstacle,
+          x: ox,
+          z: oz,
+          radius: width * 0.8
+        });
+      }
+    }
+
+    function setupControls() {
+      const setKey = (k, v) => { keys[k] = v; };
+
+      const bindBtn = (id, key) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); setKey(key, true); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); setKey(key, false); });
+        btn.addEventListener('mousedown', () => setKey(key, true));
+        btn.addEventListener('mouseup', () => setKey(key, false));
+      };
+
+      bindBtn('btn-up', 'up');
+      bindBtn('btn-down', 'down');
+      bindBtn('btn-left', 'left');
+      bindBtn('btn-right', 'right');
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w') setKey('up', true);
+        if (e.key === 'ArrowDown' || e.key === 's') setKey('down', true);
+        if (e.key === 'ArrowLeft' || e.key === 'a') setKey('left', true);
+        if (e.key === 'ArrowRight' || e.key === 'd') setKey('right', true);
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w') setKey('up', false);
+        if (e.key === 'ArrowDown' || e.key === 's') setKey('down', false);
+        if (e.key === 'ArrowLeft' || e.key === 'a') setKey('left', false);
+        if (e.key === 'ArrowRight' || e.key === 'd') setKey('right', false);
+      });
+
+      document.getElementById('switch-slot-btn').onclick = () => {
+        updateSlotModalUI();
+        document.getElementById('slot-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-catch').onclick = triggerCatch;
+    }
+
+    function updateHUD() {
+      const slot = getCurrentSlot();
+      document.getElementById('hp-bar').style.width = `${(slot.currentHp / slot.maxHp) * 100}%`;
+      document.getElementById('hp-text').innerText = `${slot.currentHp} / ${slot.maxHp} HP`;
+
+      document.getElementById('kandi-points').innerText = `${slot.kandiPoints} KP`;
+      document.getElementById('shop-kp-display').innerText = `${slot.kandiPoints} KP`;
+      document.getElementById('level-badge').innerText = `LVL ${slot.level}/100`;
+      document.getElementById('char-level-tag').innerText = `Lvl ${slot.level}`;
+
+      const topic = getMathTopicForLevel(slot.level);
+      document.getElementById('math-topic-display').innerText = `📚 ${topic.name}`;
+
+      const badge = document.getElementById('accessory-badge');
+      if (slot.equippedAccessory !== 'None') {
+        badge.innerText = `✨ ${slot.equippedAccessory}`;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      persistSaveData();
+      updateSlotModalUI();
+    }
+
+    function showNotification(msg) {
+      const box = document.getElementById('notification-box');
+      box.innerText = msg;
+      box.classList.remove('opacity-0', '-translate-y-4');
+      box.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        box.classList.remove('opacity-100', 'translate-y-0');
+        box.classList.add('opacity-0', '-translate-y-4');
+      }, 2500);
+    }
+
+    function loadLevel(lvl) {
+      const slot = getCurrentSlot();
+      slot.level = lvl;
+      caughtCount = 0;
+      isBossLevel = (lvl % 5 === 0);
+      
+      monsters.forEach(m => scene.remove(m.mesh));
+      monsters = [];
+      while(bossSkillGroup.children.length > 0) bossSkillGroup.remove(bossSkillGroup.children[0]);
+
+      playerGroup.position.set(0, 0, 14);
+      buildLevelEnvironment(lvl);
+
+      const numMonsters = isBossLevel ? 1 : Math.min(3 + Math.floor(lvl / 3), 7);
+
+      for (let i = 0; i < numMonsters; i++) {
+        let template;
+        if (isBossLevel) {
+          template = monsterTypes[3];
+        } else {
+          const typeIndex = (i + lvl) % 3;
+          template = monsterTypes[typeIndex];
+        }
+
+        const monsterMesh = createRealisticSweetMonsterModel(template);
+        scene.add(monsterMesh);
+
+        const angle = (i / numMonsters) * Math.PI * 2;
+        const dist = isBossLevel ? 8 : (10 + Math.random() * 8);
+        monsterMesh.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+
+        monsters.push({
+          mesh: monsterMesh,
+          data: template,
+          behavior: template.behavior,
+          caught: false,
+          speed: (0.0015 + lvl * 0.00005) * (template.behavior === 'chase' ? 0.45 : (template.behavior === 'flee' ? 0.18 : 0.28)),
+          patrolAngle: angle,
+          patrolRadius: dist,
+          lastSkillTime: 0
+        });
+      }
+
+      updateHUD();
+      const topic = getMathTopicForLevel(lvl);
+      showNotification(isBossLevel ? `⚠️ AMARAN: BOS GERGASI MENAKUTKAN TAPI COMEL LEVEL ${lvl} (10 Soalan ${topic.name})!` : `Level ${lvl}: ${topic.name}! 🍭`);
+    }
+
+    function triggerCatch() {
+      let closest = null;
+      let minDist = catchDistance;
+
+      monsters.forEach(m => {
+        if (!m.caught) {
+          const dist = playerGroup.position.distanceTo(m.mesh.position);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = m;
+          }
+        }
+      });
+
+      if (closest) {
+        generateMathQuestion(closest, false);
+        document.getElementById('math-modal').classList.remove('hidden');
+      } else {
+        showNotification("Sweet Monster terlalu jauh! Dekati lagi! 🏃");
+      }
+    }
+
+    function generateMathQuestion(monsterTarget, practiceMode = false) {
+      pendingCatchMonster = monsterTarget;
+      const slot = getCurrentSlot();
+      const topic = getMathTopicForLevel(slot.level);
+
+      let n1, n2, selectedOp = '+';
+      document.getElementById('math-topic-tag').innerText = `Topik: ${topic.name}`;
+
+      if (topic.type === 'add_sub') {
+        selectedOp = (slot.level % 2 === 0 && slot.level > 5) ? '-' : '+';
+        if (selectedOp === '+') {
+          n1 = Math.floor(Math.random() * (10 + slot.level)) + 1;
+          n2 = Math.floor(Math.random() * (10 + slot.level)) + 1;
+          currentMathAnswer = n1 + n2;
+        } else {
+          n1 = Math.floor(Math.random() * (15 + slot.level)) + 5;
+          n2 = Math.floor(Math.random() * n1) + 1;
+          currentMathAnswer = n1 - n2;
+        }
+      } else if (topic.type === 'multiply') {
+        selectedOp = '×';
+        n1 = Math.floor(Math.random() * 5) + 2;
+        n2 = Math.floor(Math.random() * 5) + 2;
+        currentMathAnswer = n1 * n2;
+      } else if (topic.type === 'divide') {
+        selectedOp = '÷';
+        n2 = Math.floor(Math.random() * 4) + 2;
+        const multiplier = Math.floor(Math.random() * 5) + 1;
+        n1 = n2 * multiplier;
+        currentMathAnswer = n1 / n2;
+      } else {
+        selectedOp = '+';
+        n1 = Math.floor(Math.random() * 20) + 10;
+        n2 = Math.floor(Math.random() * 15) + 5;
+        currentMathAnswer = n1 + n2;
+      }
+
+      document.getElementById('math-question').innerText = `${n1} ${selectedOp} ${n2} = ?`;
+
+      const options = [currentMathAnswer];
+      while (options.length < 4) {
+        let wrong = currentMathAnswer + (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 4) + 1);
+        if (wrong >= 0 && !options.includes(wrong)) options.push(wrong);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      const optsContainer = document.getElementById('math-options');
+      optsContainer.innerHTML = '';
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "bg-purple-500 hover:bg-purple-600 active:scale-95 text-white font-black text-xl py-2.5 rounded-xl shadow transition";
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(opt);
+        optsContainer.appendChild(btn);
+      });
+
+      const bossContainer = document.getElementById('boss-progress-container');
+      if (isBossLevel && !practiceMode) {
+        bossContainer.classList.remove('hidden');
+        document.getElementById('boss-title-label').innerText = `Nyawa Bos Gergasi Roblox:`;
+        document.getElementById('boss-hp-text').innerText = `${bossMaxQuestions - bossCurrentQuestions} / ${bossMaxQuestions} Soalan`;
+        document.getElementById('boss-hp-bar').style.width = `${((bossMaxQuestions - bossCurrentQuestions) / bossMaxQuestions) * 100}%`;
+      } else {
+        bossContainer.classList.add('hidden');
+      }
+    }
+
+    function checkAnswer(chosen) {
+      const slot = getCurrentSlot();
+      if (chosen === currentMathAnswer) {
+        slot.kandiPoints += 40;
+        updateHUD();
+
+        if (isGameFrozen) {
+          slot.currentHp = 50;
+          isGameFrozen = false;
+          updateHUD();
+          document.getElementById('math-modal').classList.add('hidden');
+          showNotification("Berjaya jawab kuiz! Watak dihidupkan semula dengan 50 HP! ✨");
+        } else if (isBossLevel) {
+          bossCurrentQuestions++;
+          if (bossCurrentQuestions >= bossMaxQuestions) {
+            document.getElementById('math-modal').classList.add('hidden');
+            if (pendingCatchMonster) {
+              pendingCatchMonster.caught = true;
+              scene.remove(pendingCatchMonster.mesh);
+              if (!slot.caughtCatalog) slot.caughtCatalog = {};
+              slot.caughtCatalog[pendingCatchMonster.data.id] = pendingCatchMonster.data;
+            }
+            bossCurrentQuestions = 0;
+            showWinModal();
+          } else {
+            showNotification("Serangan Bos Ditepis! Soalan Seterusnya! 💥");
+            generateMathQuestion(pendingCatchMonster, false);
+          }
+        } else {
+          document.getElementById('math-modal').classList.add('hidden');
+          if (pendingCatchMonster) {
+            pendingCatchMonster.caught = true;
+            scene.remove(pendingCatchMonster.mesh);
+            if (!slot.caughtCatalog) slot.caughtCatalog = {};
+            slot.caughtCatalog[pendingCatchMonster.data.id] = pendingCatchMonster.data;
+            caughtCount++;
+
+            if (caughtCount >= monsters.length) {
+              showWinModal();
+            } else {
+              showNotification("Jawapan Betul! Monster Ditangkap! +40 KP 🍬");
+            }
+          }
+        }
+      } else {
+        showNotification("Ups, Jawapan Salah! -10 HP ❌");
+        triggerDamageEffect(10);
+        slot.currentHp = Math.max(0, slot.currentHp - 10);
+        updateHUD();
+
+        if (slot.currentHp <= 0 && !isGameFrozen) {
+          freezeGameDueToZeroHP();
+        }
+      }
+    }
+
+    function freezeGameDueToZeroHP() {
+      isGameFrozen = true;
+      document.getElementById('math-modal-title').innerHTML = `<span>❄️ GAME FREEZE: JAWAB KUIZ UNTUK HIDUP SEMULA!</span>`;
+      generateMathQuestion(null, false);
+      document.getElementById('math-modal').classList.remove('hidden');
+    }
+
+    function triggerDamageEffect(amount) {
+      const body = document.getElementById('main-body');
+      body.classList.remove('damage-hit');
+      void body.offsetWidth;
+      body.classList.add('damage-hit');
+
+      const container = document.getElementById('dmg-container');
+      const dmgEl = document.createElement('div');
+      dmgEl.className = 'floating-dmg text-lg md:text-2xl';
+      dmgEl.style.left = `${window.innerWidth / 2 + (Math.random() * 60 - 30)}px`;
+      dmgEl.style.top = `${window.innerHeight / 2 + (Math.random() * 40 - 20)}px`;
+      dmgEl.innerText = `-${amount} HP 💥`;
+      container.appendChild(dmgEl);
+      setTimeout(() => dmgEl.remove(), 800);
+    }
+
+    function showWinModal() {
+      const slot = getCurrentSlot();
+      if (slot.level >= slot.unlockedLevels) slot.unlockedLevels = Math.min(maxLevel, slot.level + 1);
+      document.getElementById('win-modal').classList.remove('hidden');
+      updateHUD();
+    }
+
+    const shopData = {
+      weapons: [
+        { id: 'w1', name: 'Roblox Sugar Sword ⚔️', cost: 50, desc: 'Peningkatan Kuasa Watak', apply: () => { getCurrentSlot().equippedWeapon = 'Sugar Sword'; } },
+        { id: 'w2', name: 'Lollipop Hammer 🔨', cost: 120, desc: 'Kurangkan soalan bos -2', apply: () => { bossMaxQuestions = Math.max(3, bossMaxQuestions - 2); getCurrentSlot().equippedWeapon = 'Lollipop Hammer'; } }
+      ],
+      armor: [
+        { id: 'a1', name: 'Cotton Guard 🛡️', cost: 60, desc: 'Menambah Max HP +40', apply: () => { const s = getCurrentSlot(); s.maxHp += 40; s.currentHp += 40; s.equippedArmor = 'Cotton Guard'; } },
+        { id: 'a2', name: 'Choco Plate 🍫', cost: 150, desc: 'Kurangkan damage raksasa -5', apply: () => { const s = getCurrentSlot(); s.armorDefense += 5; s.equippedArmor = 'Choco Plate'; } }
+      ],
+      potions: [
+        { id: 'p1', name: 'HP Pemulihan Penuh 🧪', cost: 30, desc: 'Pulihkan HP Penuh', apply: () => { const s = getCurrentSlot(); s.currentHp = s.maxHp; } },
+        { id: 'p2', name: 'Super Max HP 🧪', cost: 80, desc: 'Menambah Max HP +30', apply: () => { const s = getCurrentSlot(); s.maxHp += 30; s.currentHp += 30; } }
+      ],
+      options: [
+        { id: 'o1', name: 'Kasut Laju Roblox 👟', cost: 40, desc: 'Larian watak lebih pantas', apply: () => { getCurrentSlot().playerSpeed += 0.08; } },
+        { id: 'o2', name: 'Aura Bintang Roblox ✨', cost: 100, desc: 'Pasang Aura Bintang bersinar', apply: () => { getCurrentSlot().equippedAccessory = 'Aura Bintang'; applyAccessoryToModel(); } }
+      ]
+    };
+
+    function applyAccessoryToModel() {
+      if (playerModelParts.auraRing) {
+        playerModelParts.auraRing.visible = (getCurrentSlot().equippedAccessory === 'Aura Bintang');
+      }
+    }
+
+    function switchShopTab(tab) {
+      const container = document.getElementById('shop-items-container');
+      container.innerHTML = '';
+
+      ['weapons', 'armor', 'potions', 'options'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = "px-3 py-1 text-xs font-black rounded-lg bg-pink-500 text-white whitespace-nowrap";
+        } else {
+          btn.className = "px-3 py-1 text-xs font-black rounded-lg bg-gray-200 text-gray-700 whitespace-nowrap";
+        }
+      });
+
+      shopData[tab].forEach(item => {
+        const card = document.createElement('div');
+        card.className = "flex justify-between items-center bg-white p-3 rounded-xl border-2 border-pink-200 shadow-sm";
+        card.innerHTML = `
+          <div>
+            <div class="font-black text-xs md:text-sm text-pink-600">${item.name}</div>
+            <div class="text-[10px] text-gray-500 font-bold">${item.desc}</div>
+          </div>
+          <button onclick="buyShopItem('${tab}', '${item.id}')" class="bg-purple-500 hover:bg-purple-600 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg active:scale-95 transition shadow whitespace-nowrap">
+            ${item.cost} KP
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function buyShopItem(tab, id) {
+      const slot = getCurrentSlot();
+      const item = shopData[tab].find(i => i.id === id);
+      if (item && slot.kandiPoints >= item.cost) {
+        slot.kandiPoints -= item.cost;
+        item.apply();
+        updateHUD();
+        showNotification(`Berjaya membeli ${item.name}! 🎉`);
+      } else {
+        showNotification("Kandi Points tidak mencukupi! Jawab soalan untuk kumpul KP! ❌");
+      }
+    }
+
+    function renderGallery() {
+      const grid = document.getElementById('gallery-grid');
+      grid.innerHTML = '';
+
+      const slot = getCurrentSlot();
+      const catalog = slot.caughtCatalog || {};
+
+      Object.values(catalog).forEach(m => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-3 rounded-2xl border-2 border-blue-200 text-center shadow-sm flex flex-col items-center";
+        card.innerHTML = `
+          <div class="text-2xl mb-1">🍬</div>
+          <div class="font-black text-xs text-blue-600">${m.name}</div>
+          <div class="text-[10px] text-gray-500 mt-1">${m.desc}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+      if (Object.keys(catalog).length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-xs text-gray-400 py-6">Belum ada Sweet Monster ditangkap dalam slot watak ini!</div>`;
+      }
+    }
+
+    function setupShopAndModalEvents() {
+      document.getElementById('btn-open-shop').onclick = () => {
+        switchShopTab('weapons');
+        document.getElementById('shop-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-close-shop').onclick = () => document.getElementById('shop-modal').classList.add('hidden');
+
+      document.getElementById('btn-open-gallery').onclick = () => {
+        renderGallery();
+        document.getElementById('gallery-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-close-gallery').onclick = () => document.getElementById('gallery-modal').classList.add('hidden');
+
+      document.getElementById('btn-select-level').onclick = () => {
+        renderLevelGrid();
+        document.getElementById('level-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-close-level').onclick = () => document.getElementById('level-modal').classList.add('hidden');
+
+      document.getElementById('btn-open-math').onclick = () => {
+        generateMathQuestion(null, true);
+        document.getElementById('math-modal').classList.remove('hidden');
+      };
+      document.getElementById('btn-close-math').onclick = () => document.getElementById('math-modal').classList.add('hidden');
+
+      document.getElementById('btn-next-level').onclick = () => {
+        document.getElementById('win-modal').classList.add('hidden');
+        loadLevel(getCurrentSlot().level + 1);
+      };
+    }
+
+    function renderLevelGrid() {
+      const grid = document.getElementById('level-grid');
+      grid.innerHTML = '';
+
+      const slot = getCurrentSlot();
+      for (let i = 1; i <= maxLevel; i++) {
+        const isUnlocked = i <= slot.unlockedLevels;
+        const topic = getMathTopicForLevel(i);
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-2xl border-2 flex justify-between items-center transition ${
+          isUnlocked ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 cursor-pointer hover:scale-[1.02]' : 'bg-gray-100 border-gray-300 opacity-60'
+        }`;
+        
+        card.innerHTML = `
+          <div>
+            <div class="font-black text-xs text-purple-700">Level ${i} ${i % 5 === 0 ? '👑 (BOS)' : ''}</div>
+            <div class="text-[10px] font-bold text-gray-600 mt-0.5">${topic.name}</div>
+          </div>
+          <span class="text-xs font-black px-3 py-1 rounded-xl ${isUnlocked ? 'bg-purple-600 text-white' : 'bg-gray-300 text-gray-500'}">
+            ${isUnlocked ? 'Main 🚀' : 'Berkunci 🔒'}
+          </span>
+        `;
+
+        if (isUnlocked) {
+          card.onclick = () => {
+            document.getElementById('level-modal').classList.add('hidden');
+            loadLevel(i);
+          };
+        }
+        grid.appendChild(card);
+      }
+    }
+
+    function checkObstacleCollision(nextX, nextZ, radius = 0.8) {
+      for (let obs of obstacles) {
+        const dx = nextX - obs.x;
+        const dz = nextZ - obs.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < (radius + 1.0)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function spawnBossSkillEffect(bossMesh) {
+      const skillGeo = new THREE.RingGeometry(0.5, 2.5, 16);
+      const skillMat = new THREE.MeshBasicMaterial({ color: 0xa855f7, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+      const ring = new THREE.Mesh(skillGeo, skillMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.copy(bossMesh.position);
+      ring.position.y = 0.1;
+      bossSkillGroup.add(ring);
+
+      let scale = 1.0;
+      const expandInterval = setInterval(() => {
+        scale += 0.15;
+        ring.scale.set(scale, scale, scale);
+        ring.material.opacity -= 0.08;
+        if (ring.material.opacity <= 0) {
+          clearInterval(expandInterval);
+          bossSkillGroup.remove(ring);
+        }
+      }, 30);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const slot = getCurrentSlot();
+      if (!isGameFrozen) {
+        let nextX = playerGroup.position.x;
+        let nextZ = playerGroup.position.z;
+
+        if (keys.up) nextZ -= slot.playerSpeed;
+        if (keys.down) nextZ += slot.playerSpeed;
+        if (keys.left) nextX -= slot.playerSpeed;
+        if (keys.right) nextX += slot.playerSpeed;
+
+        if (!checkObstacleCollision(nextX, nextZ, 0.7)) {
+          playerGroup.position.x = nextX;
+          playerGroup.position.z = nextZ;
+        }
+
+        const arenaLimit = Math.min(27 + Math.floor(slot.level / 4), 43);
+        const radius = playerGroup.position.length();
+        if (radius > arenaLimit) {
+          playerGroup.position.multiplyScalar(arenaLimit / radius);
+        }
+
+        const now = Date.now();
+        monsters.forEach(m => {
+          if (!m.caught) {
+            const distToPlayer = m.mesh.position.distanceTo(playerGroup.position);
+
+            if (m.behavior === 'boss') {
+              m.patrolAngle += 0.015;
+              let mx = Math.cos(m.patrolAngle) * (m.patrolRadius * 0.8);
+              let mz = Math.sin(m.patrolAngle * 0.7) * (m.patrolRadius * 0.8);
+              if (!checkObstacleCollision(mx, mz, 1.5)) {
+                m.mesh.position.x = mx;
+                m.mesh.position.z = mz;
+              }
+
+              if (now - m.lastSkillTime > 4000) {
+                m.lastSkillTime = now;
+                spawnBossSkillEffect(m.mesh);
+                showNotification("⚠️ Bos Gergasi melancarkan Sihir Manisan Comel!");
+              }
+            } else if (m.behavior === 'chase') {
+              const dir = new THREE.Vector3().subVectors(playerGroup.position, m.mesh.position).normalize();
+              let mx = m.mesh.position.x + dir.x * m.speed;
+              let mz = m.mesh.position.z + dir.z * m.speed;
+              if (!checkObstacleCollision(mx, mz, 1.0)) {
+                m.mesh.position.x = mx;
+                m.mesh.position.z = mz;
+              }
+            } else if (m.behavior === 'flee') {
+              if (distToPlayer < 7.0) {
+                const dir = new THREE.Vector3().subVectors(m.mesh.position, playerGroup.position).normalize();
+                let mx = m.mesh.position.x + dir.x * m.speed * 0.4;
+                let mz = m.mesh.position.z + dir.z * m.speed * 0.4;
+                if (!checkObstacleCollision(mx, mz, 1.0)) {
+                  m.mesh.position.x = mx;
+                  m.mesh.position.z = mz;
+                }
+              } else {
+                m.patrolAngle += 0.005;
+                let mx = Math.cos(m.patrolAngle) * m.patrolRadius;
+                let mz = Math.sin(m.patrolAngle) * m.patrolRadius;
+                if (!checkObstacleCollision(mx, mz, 1.0)) {
+                  m.mesh.position.x = mx;
+                  m.mesh.position.z = mz;
+                }
+              }
+            } else {
+              m.patrolAngle += 0.008;
+              let mx = Math.cos(m.patrolAngle) * m.patrolRadius;
+              let mz = Math.sin(m.patrolAngle) * m.patrolRadius;
+              if (!checkObstacleCollision(mx, mz, 1.0)) {
+                m.mesh.position.x = mx;
+                m.mesh.position.z = mz;
+              }
+            }
+
+            const mRadius = m.mesh.position.length();
+            if (mRadius > arenaLimit) {
+              m.mesh.position.multiplyScalar(arenaLimit / mRadius);
+            }
+
+            if (distToPlayer < 2.5) {
+              if (now - lastTouchDamageTime > 1500) {
+                const damage = Math.max(2, 4 - slot.armorDefense);
+                lastTouchDamageTime = now;
+                slot.currentHp = Math.max(0, slot.currentHp - damage);
+                updateHUD();
+                triggerDamageEffect(damage);
+                showNotification(`Tersentuh Sweet Monster! -${damage} HP ⚠️`);
+
+                if (slot.currentHp <= 0) {
+                  freezeGameDueToZeroHP();
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Isometric Top-Down camera view following player with adjustable zoom
+      camera.position.x = playerGroup.position.x;
+      camera.position.y = cameraHeightOffset;
+      camera.position.z = playerGroup.position.z + cameraDistanceOffset;
+      camera.lookAt(playerGroup.position);
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
